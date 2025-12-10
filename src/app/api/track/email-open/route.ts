@@ -16,7 +16,10 @@ export async function GET(request: NextRequest) {
         email: email,
         opened_at: new Date().toISOString(),
         user_agent: request.headers.get("user-agent") || "",
-        ip: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "",
+        ip:
+          request.headers.get("x-forwarded-for") ||
+          request.headers.get("x-real-ip") ||
+          "",
       },
     });
   }
