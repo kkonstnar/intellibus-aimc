@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const user_id = searchParams.get("user_id");
   const email = searchParams.get("email");
 
-  if (user_id && email) {
+  if (user_id && email && posthog) {
     posthog.capture({
       distinctId: user_id,
       event: "magic_link_email_opened",

@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const redirect = searchParams.get("redirect");
   const user_id = searchParams.get("user_id");
 
-  if (user_id) {
+  if (user_id && posthog) {
     posthog.capture({
       distinctId: user_id,
       event: "magic_link_clicked",

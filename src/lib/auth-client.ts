@@ -30,7 +30,8 @@ if (typeof window !== "undefined") {
   }
 }
 
-export const authClient = createAuthClient({
+// Use 'any' to allow dynamic plugin methods
+export const authClient: any = createAuthClient({
   baseURL: API_URL,
   plugins,
 });
