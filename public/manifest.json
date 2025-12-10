@@ -1,0 +1,15 @@
+{
+  "short_name": "AI Masterclass",
+  "name": "AI Masterclass Executive Education",
+  "icons": [
+    {
+      "src": "AIMC_Angled_Horiz_w Title_Violet.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#57068c",
+  "background_color": "#000000"
+}

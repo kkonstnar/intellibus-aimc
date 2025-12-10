@@ -1,0 +1,201 @@
+// Prisma Schema for AI Masterclass Course Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // For migrations (bypasses connection pooler)
+}
+
+// User model for authentication
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  name          String?
+  role          String   @default("user") // user, admin
+  tier          String   @default("free") // free, paid, premium
+  source        String?  // signup source: landing, course-listing, referral
+  company       String?
+  jobTitle      String?
+  paidAt        DateTime? // When they upgraded to paid
+  amountPaid    Int?     // Amount paid in cents
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  sessions           Session[]
+  accounts           Account[]
+  courseProgress     CourseProgress[]
+  emailNotifications EmailNotification[]
+
+  @@index([email])
+  @@index([tier])
+}
+
+// Session model for Better Auth
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Account model for Better Auth providers
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+// Verification model for Better Auth magic links
+model verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier])
+  @@map("verification")
+}
+
+// Course modules/videos definition
+model CourseModule {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String?
+  videoUrl    String?  // Mux playback ID or URL
+  duration    Int      @default(0) // Duration in seconds
+  order       Int      @default(0)
+  tier        String   @default("free") // free, paid, premium
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  progress    CourseProgress[]
+  videoEvents VideoEvent[]
+
+  @@index([tier])
+  @@index([order])
+}
+
+// Course progress tracking per user per module
+model CourseProgress {
+  id              String    @id @default(cuid())
+  userId          String
+  moduleId        String
+  watchedSeconds  Int       @default(0) // Total seconds watched
+  maxPosition     Int       @default(0) // Furthest point reached in seconds
+  completed       Boolean   @default(false)
+  completionPct   Float     @default(0) // 0-100 percentage
+  watchCount      Int       @default(1) // Number of times started watching
+  startedAt       DateTime  @default(now())
+  lastWatchedAt   DateTime  @default(now())
+  completedAt     DateTime?
+
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId])
+  @@index([userId])
+  @@index([moduleId])
+  @@index([completed])
+}
+
+// Detailed video events for analytics
+model VideoEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  moduleId  String
+  eventType String   // play, pause, seek, ended, progress_25, progress_50, progress_75, progress_100
+  position  Int      @default(0) // Position in seconds when event occurred
+  metadata  String?  // JSON for additional data
+  createdAt DateTime @default(now())
+
+  module CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([moduleId])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+// Email notifications sent to users
+model EmailNotification {
+  id          String    @id @default(cuid())
+  userId      String
+  email       String
+  type        String    // welcome, reminder, progress_update, completion, promotional
+  subject     String
+  status      String    @default("pending") // pending, sent, failed, opened, clicked
+  sentAt      DateTime?
+  openedAt    DateTime?
+  clickedAt   DateTime?
+  metadata    String?   // JSON for template variables
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([email])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Analytics event tracking (optional - PostHog handles this, but useful for backup)
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  userId     String?
+  eventName  String
+  properties String? // JSON string
+  timestamp  DateTime @default(now())
+
+  @@index([userId])
+  @@index([eventName])
+  @@index([timestamp])
+}
+
+// Discount requests from users wanting bigger discounts
+model DiscountRequest {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  company   String
+  jobTitle  String
+  status    String   @default("pending") // pending, sent, expired
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+}

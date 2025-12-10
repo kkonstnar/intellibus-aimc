@@ -1,0 +1,108 @@
+// Prisma Schema for AI Masterclass Course Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  name          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  sessions       Session[]
+  accounts       Account[]
+  courseProgress CourseProgress[]
+
+  @@index([email])
+}
+
+// Session model for Better Auth
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Account model for Better Auth providers
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+// Verification token for magic links
+model verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier])
+  @@map("verification")
+}
+
+// Course progress tracking
+model CourseProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  moduleId    String
+  moduleName  String
+  completed   Boolean   @default(false)
+  lastPosition Int      @default(0) // For video progress tracking
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId])
+  @@index([userId])
+  @@index([moduleId])
+}
+
+// Analytics event tracking (optional - PostHog handles this, but useful for backup)
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  userId     String?
+  eventName  String
+  properties String? // JSON string
+  timestamp  DateTime @default(now())
+
+  @@index([userId])
+  @@index([eventName])
+  @@index([timestamp])
+}
+
