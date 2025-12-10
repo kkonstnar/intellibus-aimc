@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { db } from "@/lib/db";
+import { prisma } from "@/lib/db";
 
 // List of admin emails (add your email here or use env var)
 const ADMIN_EMAILS = process.env.ADMIN_EMAILS?.split(",").map(e => e.trim().toLowerCase()) || [];
@@ -19,7 +19,7 @@ export async function GET() {
     const userEmail = session.user.email?.toLowerCase();
     
     // Check if user is admin by role in database
-    const user = await db.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { role: true, email: true },
     });
@@ -31,7 +31,7 @@ export async function GET() {
 
     // If user's email is in ADMIN_EMAILS but role isn't admin, update it
     if (isAdmin && user?.role !== "admin" && ADMIN_EMAILS.includes(userEmail || "")) {
-      await db.user.update({
+      await prisma.user.update({
         where: { id: session.user.id },
         data: { role: "admin" },
       });
