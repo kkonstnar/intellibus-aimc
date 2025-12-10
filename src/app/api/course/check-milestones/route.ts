@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
     // Get email content
     const emailContent = getMilestoneEmail(
       milestone.percent,
-      user.name,
+      user.name || "there",
       appUrl
     );
     const resend = getResend();
